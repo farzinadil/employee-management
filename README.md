@@ -1,165 +1,185 @@
 # Employee Management App
 
-Full-stack Employee Management CRUD application.
+Full-stack Employee Management CRUD application with role-based authentication.
 
-The backend is a Spring Boot REST API using Spring Data JPA and MySQL. The frontend will be a React app that consumes the backend APIs.
+- **Backend:** Spring Boot REST API (Java 17, Spring Boot 3.4.5, Spring Security, Spring Data JPA, H2)
+- **Frontend:** React 19 with Bootstrap 5, Axios, React Router
 
-## Backend File Structure
+---
+
+## Features
+
+- JWT-based authentication — tokens are stored in `localStorage` and sent as `Authorization: Bearer` headers
+- Role-based access control:
+  - **MANAGER** — full CRUD (view, add, edit, delete employees)
+  - **EMPLOYEE** — read-only (view list only, no add/edit/delete buttons)
+- Login screen matching the app's existing Bootstrap card UI
+- Navbar shows logged-in username, role badge, and a Logout button
+- Unauthenticated users are redirected to `/login`
+
+---
+
+## Default Credentials
+
+| Username   | Password      | Role     |
+|------------|---------------|----------|
+| `manager`  | `manager123`  | MANAGER  |
+| `employee` | `employee123` | EMPLOYEE |
+
+These users are seeded automatically on startup via `DataInitializer.java`.
+
+---
+
+## Running the App
+
+### Backend
+
+```bash
+cd backend
+JAVA_HOME=/path/to/java17 ./mvnw spring-boot:run
+```
+
+Starts on `http://localhost:8080`.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Starts on `http://localhost:3000`.
+
+---
+
+## API Endpoints
+
+### Auth
+
+| Method | Endpoint              | Access  | Description        |
+|--------|-----------------------|---------|--------------------|
+| POST   | `/api/v1/auth/login`  | Public  | Returns JWT token  |
+
+**Request body:**
+```json
+{ "username": "manager", "password": "manager123" }
+```
+
+**Response:**
+```json
+{ "token": "<jwt>", "username": "manager", "role": "MANAGER" }
+```
+
+### Employees
+
+All employee endpoints require a valid JWT in the `Authorization: Bearer <token>` header.
+
+| Method | Endpoint                   | Role Required        | Description            |
+|--------|----------------------------|----------------------|------------------------|
+| GET    | `/api/v1/employees`        | MANAGER or EMPLOYEE  | List all employees     |
+| GET    | `/api/v1/employees/{id}`   | MANAGER or EMPLOYEE  | Get employee by ID     |
+| POST   | `/api/v1/employees`        | MANAGER only         | Create employee        |
+| PUT    | `/api/v1/employees/{id}`   | MANAGER only         | Update employee        |
+| DELETE | `/api/v1/employees/{id}`   | MANAGER only         | Delete employee        |
+
+---
+
+## Testing
+
+### Manual — Browser
+
+1. Start the backend and frontend.
+2. Open `http://localhost:3000` — you should be redirected to `/login`.
+3. Log in as `employee` / `employee123`:
+   - The employee list loads.
+   - No "Add Employee" button, no Update/Delete columns.
+4. Log out, then log in as `manager` / `manager123`:
+   - "Add Employee" button appears.
+   - Update and Delete buttons appear in each row.
+   - Creating, editing, and deleting employees all work.
+5. Verify that navigating directly to `/add-employee` while logged in as `employee` redirects back to `/employees`.
+
+### Manual — curl
+
+**Login:**
+```bash
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"manager","password":"manager123"}' | jq .
+```
+
+**List employees (authenticated):**
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"manager","password":"manager123"}' | jq -r .token)
+
+curl -s http://localhost:8080/api/v1/employees \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+**Verify EMPLOYEE cannot create (expect 403):**
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"employee","password":"employee123"}' | jq -r .token)
+
+curl -s -o /dev/null -w "%{http_code}" \
+  -X POST http://localhost:8080/api/v1/employees \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"Test","lastName":"User","email":"test@test.com"}'
+# Expected: 403
+```
+
+**Verify unauthenticated request is rejected (expect 401/403):**
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/employees
+# Expected: 403
+```
+
+---
+
+## Project Structure
 
 ```text
-backend/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com.farzin.ems/
-│   │   │       ├── EmsBackendApplication.java
-│   │   │       ├── controller/
-│   │   │       │   └── EmployeeController.java
-│   │   │       ├── dto/
-│   │   │       │   └── EmployeeDto.java
-│   │   │       ├── entity/
-│   │   │       │   └── Employee.java
-│   │   │       ├── exception/
-│   │   │       │   └── ResourceNotFoundException.java
-│   │   │       ├── mapper/
-│   │   │       │   └── EmployeeMapper.java
-│   │   │       ├── repository/
-│   │   │       │   └── EmployeeRepository.java
-│   │   │       └── service/
-│   │   │           ├── EmployeeService.java
-│   │   │           └── EmployeeServiceImpl.java
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       ├── static/
-│   │       └── templates/
-│   └── test/
-├── pom.xml
-└── target/
-
-Backend Architecture
-
-React Frontend
-    ↓
-EmployeeController
-    ↓
-EmployeeService
-    ↓
-EmployeeServiceImpl
-    ↓
-EmployeeRepository
-    ↓
-MySQL Database
-
-
-File Responsibilities
-EmsBackendApplication.java
-
-Main entry point for the Spring Boot application.
-
-Contains the main() method and starts the embedded Tomcat server.
-
-Uses @SpringBootApplication, which combines:
-
-@Configuration
-@EnableAutoConfiguration
-@ComponentScan
-controller/EmployeeController.java
-
-REST controller layer.
-
-Responsible for handling HTTP requests from the frontend.
-
-Exposes CRUD endpoints:
-
-GET    /api/v1/employees
-POST   /api/v1/employees
-GET    /api/v1/employees/{id}
-PUT    /api/v1/employees/{id}
-DELETE /api/v1/employees/{id}
-
-Common annotations:
-
-@RestController
-@RequestMapping
-@GetMapping
-@PostMapping
-@PutMapping
-@DeleteMapping
-@RequestBody
-@PathVariable
-dto/EmployeeDto.java
-
-DTO stands for Data Transfer Object.
-
-Used to transfer employee data between the API layer and service layer.
-
-Helps avoid exposing the database entity directly to API consumers.
-
-entity/Employee.java
-
-JPA entity class.
-
-Represents the employees table in MySQL.
-
-Common annotations:
-
-@Entity
-@Table
-@Id
-@GeneratedValue
-@Column
-exception/ResourceNotFoundException.java
-
-Custom exception used when an employee ID does not exist.
-
-Mapped to HTTP 404 NOT FOUND using @ResponseStatus.
-
-mapper/EmployeeMapper.java
-
-Converts between:
-
-Employee entity ↔ EmployeeDto
-
-Keeps entity/DTO conversion logic separate from controller and service code.
-
-repository/EmployeeRepository.java
-
-Data access layer.
-
-Extends JpaRepository<Employee, Long>.
-
-Spring Data JPA automatically provides methods like:
-
-findAll()
-findById()
-save()
-delete()
-service/EmployeeService.java
-
-Service interface.
-
-Defines the business operations supported by the app:
-
-create employee
-get employee by ID
-get all employees
-update employee
-delete employee
-service/EmployeeServiceImpl.java
-
-Service implementation.
-
-Contains the business logic and calls the repository layer.
-
-Also handles cases where an employee does not exist by throwing ResourceNotFoundException.
-
-resources/application.properties
-
-Application configuration file.
-
-Contains:
-
-application name
-MySQL datasource URL
-database username/password
-Hibernate/JPA settings
+employee-management-app/
+├── backend/
+│   └── src/main/java/com/farzin/ems/
+│       ├── config/
+│       │   ├── DataInitializer.java       # Seeds default users on startup
+│       │   └── SecurityConfig.java        # JWT filter chain, CORS, role rules
+│       ├── controller/
+│       │   ├── AuthController.java        # POST /api/v1/auth/login
+│       │   └── EmployeeController.java    # CRUD endpoints
+│       ├── dto/
+│       │   ├── EmployeeDto.java
+│       │   ├── JwtResponse.java
+│       │   └── LoginRequest.java
+│       ├── entity/
+│       │   ├── Employee.java
+│       │   ├── Role.java                  # MANAGER, EMPLOYEE
+│       │   └── User.java
+│       ├── repository/
+│       │   ├── EmployeeRepository.java
+│       │   └── UserRepository.java
+│       ├── security/
+│       │   ├── CustomUserDetailsService.java
+│       │   ├── JwtAuthenticationFilter.java
+│       │   └── JwtUtil.java
+│       └── service/
+│           ├── EmployeeService.java
+│           └── EmployeeServiceImpl.java
+└── frontend/
+    └── src/
+        ├── components/
+        │   ├── EmployeeComponent.js       # Add/edit form (manager only)
+        │   ├── FooterComponent.js
+        │   ├── HeaderComponent.js         # Shows user, role badge, logout
+        │   ├── ListEmployeeComponent.js   # Hides actions for non-managers
+        │   └── LoginComponent.js          # Login form
+        └── services/
+            ├── AuthService.js             # login/logout/token helpers
+            └── EmployeeService.js         # Axios calls with auth headers
+```

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteEmployee, listEmployees } from "../services/EmployeeService";
+import { isManager } from "../services/AuthService";
 
 const ListEmployeeComponent = () => {
   const [employees, setEmployees] = useState([]);
   const navigate = useNavigate();
+  const manager = isManager();
 
   useEffect(() => {
     getAllEmployees();
@@ -18,14 +20,6 @@ const ListEmployeeComponent = () => {
       .catch((error) => {
         console.log(error);
       });
-  };
-
-  const addNewEmployee = () => {
-    navigate("/add-employee");
-  };
-
-  const updateEmployee = (id) => {
-    navigate(`/edit-employee/${id}`);
   };
 
   const removeEmployee = (id) => {
@@ -43,9 +37,14 @@ const ListEmployeeComponent = () => {
       <br />
       <h2 className="text-center">List Employees</h2>
 
-      <button className="btn btn-primary mb-2" onClick={addNewEmployee}>
-        Add Employee
-      </button>
+      {manager && (
+        <button
+          className="btn btn-primary mb-2"
+          onClick={() => navigate("/add-employee")}
+        >
+          Add Employee
+        </button>
+      )}
 
       <table className="table table-bordered table-striped">
         <thead>
@@ -54,7 +53,7 @@ const ListEmployeeComponent = () => {
             <th>Employee First Name</th>
             <th>Employee Last Name</th>
             <th>Employee Email Id</th>
-            <th>Actions</th>
+            {manager && <th>Actions</th>}
           </tr>
         </thead>
 
@@ -65,22 +64,23 @@ const ListEmployeeComponent = () => {
               <td>{employee.firstName}</td>
               <td>{employee.lastName}</td>
               <td>{employee.email}</td>
-              <td>
-                <button
-                  className="btn btn-info"
-                  onClick={() => updateEmployee(employee.id)}
-                >
-                  Update
-                </button>
-
-                <button
-                  className="btn btn-danger"
-                  onClick={() => removeEmployee(employee.id)}
-                  style={{ marginLeft: "10px" }}
-                >
-                  Delete
-                </button>
-              </td>
+              {manager && (
+                <td>
+                  <button
+                    className="btn btn-info"
+                    onClick={() => navigate(`/edit-employee/${employee.id}`)}
+                  >
+                    Update
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => removeEmployee(employee.id)}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    Delete
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

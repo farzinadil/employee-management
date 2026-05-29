@@ -5,13 +5,16 @@ import com.farzin.ems.service.EmployeeService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-
-// @CrossOrigin allows the React frontend, usually localhost:3000, to call this backend.
-// For learning/demo this is fine. In production, restrict allowed origins.
-@CrossOrigin("*")
 
 // @RestController = @Controller + @ResponseBody.
 // It tells Spring this class exposes REST APIs and returns JSON responses.

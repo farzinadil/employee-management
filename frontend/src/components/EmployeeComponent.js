@@ -5,6 +5,7 @@ import {
   getEmployeeById,
   updateEmployee,
 } from "../services/EmployeeService";
+import { isManager } from "../services/AuthService";
 
 const EmployeeComponent = () => {
   const [firstName, setFirstName] = useState("");
@@ -15,6 +16,10 @@ const EmployeeComponent = () => {
   const { id } = useParams();
 
   useEffect(() => {
+    if (!isManager()) {
+      navigate("/employees");
+      return;
+    }
     if (id) {
       getEmployeeById(id)
         .then((response) => {
@@ -26,42 +31,22 @@ const EmployeeComponent = () => {
           console.log(error);
         });
     }
-  }, [id]);
+  }, [id, navigate]);
 
   const saveOrUpdateEmployee = (event) => {
     event.preventDefault();
 
-    const employee = {
-      firstName,
-      lastName,
-      email,
-    };
+    const employee = { firstName, lastName, email };
 
     if (id) {
       updateEmployee(id, employee)
-        .then(() => {
-          navigate("/employees");
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+        .then(() => navigate("/employees"))
+        .catch((error) => console.log(error));
     } else {
       createEmployee(employee)
-        .then(() => {
-          navigate("/employees");
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+        .then(() => navigate("/employees"))
+        .catch((error) => console.log(error));
     }
-  };
-
-  const pageTitle = () => {
-    if (id) {
-      return <h2 className="text-center">Update Employee</h2>;
-    }
-
-    return <h2 className="text-center">Add Employee</h2>;
   };
 
   return (
@@ -72,7 +57,7 @@ const EmployeeComponent = () => {
       <div className="container">
         <div className="row">
           <div className="card col-md-6 offset-md-3">
-            {pageTitle()}
+            <h2 className="text-center">{id ? "Update Employee" : "Add Employee"}</h2>
 
             <div className="card-body">
               <form>
@@ -112,10 +97,7 @@ const EmployeeComponent = () => {
                   />
                 </div>
 
-                <button
-                  className="btn btn-success"
-                  onClick={saveOrUpdateEmployee}
-                >
+                <button className="btn btn-success" onClick={saveOrUpdateEmployee}>
                   Submit
                 </button>
 
